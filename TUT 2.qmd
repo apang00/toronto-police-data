@@ -1,0 +1,71 @@
+---
+title: "Toronto Police Data"
+format: html
+---
+#### Preamble ####
+# Purpose: Read in data from Toronto investigated 
+# complaints between 2014 to 2022
+# Author: Yi Fei Pang
+# Email: yifei.pang@mail.utoronto.ca
+# Date: 15 January 2023
+# Prerequisites: Have access to the opendatatoronto dataset
+
+
+#### Workspace Setup ####
+install.packages("tidyverse")\
+install.packages("janitor")\
+install.packages("opendatatoronto")\
+install.packages("dplyr")\
+install.packages("ggplot2")
+
+
+#### Read in Data ####
+```{r}
+library(opendatatoronto)
+library(dplyr)
+library(tidyverse)
+library(janitor)
+library(ggplot2)
+
+package <- show_package("police-annual-statistical-report-total-public-complaints")
+
+# get all resources for this package
+resources <- list_package_resources("police-annual-statistical-report-total-public-complaints")
+
+# identify datastore resources; by default, Toronto Open Data sets datastore 
+# resource format to CSV for non-geospatial and GeoJSON for geospatial resources
+datastore_resources <- filter(resources, tolower(format) %in% c('csv', 'geojson'))
+
+# load the first datastore resource
+data <- filter(datastore_resources, row_number()==1) %>% get_resource()
+```
+
+
+#### Clean Data ####
+```{r}
+cleaned_police_data <-
+  data |>
+  select(
+    YEAR,
+    TYPE,
+    COUNT_
+  ) %>%
+  # must mutate because the COUNT_ is <chr> data type and not <int>
+  mutate(COUNT_ = as.numeric(COUNT_)) %>%
+  group_by(YEAR, TYPE) %>%
+  summarise(CASES = sum(COUNT_))
+
+```
+
+#### Display Data ####
+```{r}
+ggplot(cleaned_police_data, aes(x = factor(YEAR), y = CASES, fill = TYPE)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Cases By Year",
+       x = "Year",
+       y = "Cases",
+       fill = "Complaint Type") +
+  theme_minimal()
+
+```
+
